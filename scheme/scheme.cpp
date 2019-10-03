@@ -92,6 +92,11 @@ string getNextToken(string &word) { //get by reperence
 		return "";
 	}
 	switch (word.at(0)) {
+	case '\'': {
+		token = "'";
+		word.erase(0, 1);
+		return token;
+	}
 	case ')': {
 		token = ")";
 		word.erase(0, 1);
@@ -166,6 +171,42 @@ int read() {
 	else return -token_hash;
 }
 
+string concatenate(string body, string token) {
+	return body +" "+ token;
+}
+
+string preprocessing() {
+	string new_command = "";
+	string token = getNextToken(input);
+	while (token.length() > 0) {
+		if (token == "define") {
+			new_command = concatenate(new_command, "define");
+			token = getNextToken(input);
+			if (token == "(") {
+				token = getNextToken(input);
+				new_command = concatenate(new_command, token);
+				new_command = concatenate(new_command, "( lambda (");
+				new_command = concatenate(new_command, preprocessing());
+				new_command = concatenate(new_command, ")");
+			}
+		}
+		else if (token == "'") {
+			new_command = concatenate(new_command, "(quote");
+			int number_of_nextparen = 0;
+			do {
+				token = getNextToken(input);
+				new_command = concatenate(new_command, token);
+				if (token == "(") number_of_nextparen += 1;
+				else if (token == ")") number_of_nextparen -= 1;
+			} while (number_of_nextparen > 0);
+			new_command = concatenate(new_command, ")");
+		}
+		else new_command = concatenate(new_command, token);
+	}
+	return new_command;
+}
+
+/*
 int int_width(int num)
 {
 	int ret;
@@ -197,7 +238,7 @@ void outputString(int node_root, bool leftParam) {
 	}
 }
 void outputMemory(int node_root) {
-	/*
+	
 	//node array만 출력하게 하는 함수
 	if (node_root <= 0) return;
 	cout << memory_array[node_root]->getIndex();
@@ -209,7 +250,7 @@ void outputMemory(int node_root) {
 	cout << memory_array[node_root]->getrchild() << '\n';
 	if (memory_array[node_root]->lchild > 0) outputMemory(memory_array[node_root]->lchild);
 	if (memory_array[node_root]->rchild != 0) outputMemory(memory_array[node_root]->rchild);
-	*/
+	
 	//memory array 모두 출력
 	for (int i = 0; i < MEMORY_LENGTH; i++) {
 		cout << memory_array[i]->getIndex();
@@ -219,10 +260,7 @@ void outputMemory(int node_root) {
 		cout << memory_array[i]->getlchild();
 		outputBlank(12 - int_width(memory_array[i]->getlchild()));
 		cout << memory_array[i]->getrchild() << '\n';
-
 	}
-
-
 }
 void outputHash() {
 	for (int i = 0; i < HASH_LENGTH; i++) {
@@ -251,6 +289,8 @@ void output(int node_root) {
 
 	cout << '\n';
 }
+*/
+//proj1의 출력함수
 
 int main() {
 	//hash array, memory array(30) making
@@ -262,28 +302,17 @@ int main() {
 	}
 
 	while (1) {
-		//input
 		int read_root = 0;
-		//string
 		getline(cin, input);
 		input = doLower(input);
-		//	cout << getNextToken(input) << "\n";
-		//	cout << input;
-		// cout << hashCal(input) << '\n';
-		// cout << getHashValue(input) << '\n';
+
+		input = preprocessing();
 
 		read_root = read();
 
-		output(read_root);
+		//result = eval(read_root);
+		//printresult(result, true);
 	}
-	//read
-	//output
 
 	return 0;
 }
-/*
-input : 10 이하 string (소문자로 바꾸기)
-
-output : free-list root index, memory array root index, memory table 내용, hash table 내용, string
-
-*/
