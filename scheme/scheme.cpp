@@ -63,17 +63,21 @@ int hashCal(string word) { //calculate hash value
 	return hash_value;
 }
 
-int getHashValue(string word) { //return hash value
+string getVal(int hashvalue) {  // hashvalue > 0
+	return hash_array[hashvalue];
+}
+
+int getHashValue(string word) { //return hash value > 0
 	int hash_value = hashCal(word);
 	if (hash_array[hash_value].length() != 0) {
 		int i = hash_value;
 		while (hash_array[i].length() != 0) {
-			if (hash_array[i] == word) return hash_value;
+			if (hash_array[i] == word) return i;
 			i += 1;
 			i %= HASH_LENGTH;
 		}
 		hash_array[i] = word;
-		return hash_value;
+		return i;
 	}
 	else {
 		hash_array[hash_value] = word;
@@ -202,8 +206,60 @@ string preprocessing() {
 			new_command = concatenate(new_command, ")");
 		}
 		else new_command = concatenate(new_command, token);
+
+		token = getNextToken(input);
 	}
 	return new_command;
+}
+
+int eval(int node_root) {
+	if (node_root < 0) {
+		return -node_root;
+	}
+	int token_index = -memory_array[node_root]->lchild;
+
+	if (token_index == getHashValue("user defined func")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("+")) {
+		return getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) + stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
+	}
+	else if (token_index == getHashValue("-")) {
+		return getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) - stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
+	}
+	else if (token_index == getHashValue("*")) {
+		return getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) * stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
+	}
+	else if (token_index == getHashValue("number?")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("symbol?")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("null?")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("cons")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("cond")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("car")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("cdr")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("define")) {
+		return 0;
+	}
+	else if (token_index == getHashValue("quote")) {
+		return 0;
+	}
+	else {
+		return token_index;
+	}
 }
 
 /*
@@ -217,24 +273,6 @@ int int_width(int num)
 void outputBlank(int num) {
 	for (int i = 0; i < num; i++) {
 		cout << " ";
-	}
-}
-void outputString(int node_root, bool leftParam) {
-	if (node_root < 0) cout << hash_array[-node_root];
-	else if (node_root == 0) cout << "()";
-	else {
-		int lchild = memory_array[node_root]->lchild;
-		int rchild = memory_array[node_root]->rchild;
-		dealloc(node_root);
-		if (leftParam) cout << "(";
-		if (lchild < 0) {
-			cout << hash_array[-lchild] << " ";
-		}
-		else {
-			outputString(lchild, 1);
-		}
-		if (rchild == 0) cout << ") ";
-		else outputString(rchild, 0);
 	}
 }
 void outputMemory(int node_root) {
@@ -271,25 +309,31 @@ void outputHash() {
 		}
 	}
 }
+*/
 
+void outputString(int node_root, bool leftParam) {
+	if (node_root < 0) cout << hash_array[-node_root];
+	else if (node_root == 0) cout << "()";
+	else {
+		int lchild = memory_array[node_root]->lchild;
+		int rchild = memory_array[node_root]->rchild;
+		if (leftParam) cout << "(";
+		if (lchild < 0) {
+			cout << hash_array[-lchild] << " ";
+		}
+		else {
+			outputString(lchild, 1);
+		}
+		if (rchild == 0) cout << ") ";
+		else outputString(rchild, 0);
+	}
+}
 void output(int node_root) {
-	cout << "Free list's root : " << freelist << '\n'
-		<< "List's root : " << node_root << '\n'
-		<< '\n'
-		<< "Memory table = \n"
-		<< "index   left value   right value \n";
-	outputMemory(node_root);
-
-	cout << '\n' << "Hash table = \n"
-		<< "index   symbol \n";
-	outputHash();
-
 	cout << '\n';
 	outputString(node_root, 1);
 
 	cout << '\n';
 }
-*/
 //proj1의 출력함수
 
 int main() {
@@ -310,7 +354,10 @@ int main() {
 
 		read_root = read();
 
-		//result = eval(read_root);
+		output(read_root);
+		int result = 0;
+		result = eval(read_root);
+		cout << getVal(result);
 		//printresult(result, true);
 	}
 
