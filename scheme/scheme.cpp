@@ -2,7 +2,7 @@
 #include<string>
 #include<istream>
 
-#define MEMORY_LENGTH 30
+#define MEMORY_LENGTH 90
 #define HASH_LENGTH 997
 
 using namespace std;
@@ -14,7 +14,7 @@ public:
 	int rchild;
 	int lchild;
 	Memory() {
-		index = -1;
+		index = NULL;
 		rchild = 0;
 		lchild = 0;
 	}
@@ -35,7 +35,22 @@ public:
 };
 Memory* memory_array[MEMORY_LENGTH];
 string input;
-string hash_array[HASH_LENGTH];
+class Hash {
+public:
+	int index;
+	string symbol;
+	int pointer;
+	Hash() {
+		index = NULL;
+		symbol = "";
+		pointer = NULL;
+	}
+	Hash(int index, string symbol) {
+		this->index = index;
+		this->symbol = symbol;
+	}
+};
+Hash hash_array[HASH_LENGTH];
 int freelist = 1;
 
 string doLower(string word) {
@@ -64,23 +79,23 @@ int hashCal(string word) { //calculate hash value
 }
 
 string getVal(int hashvalue) {  // hashvalue > 0
-	return hash_array[hashvalue];
+	return hash_array[abs(hashvalue)].symbol;
 }
 
 int getHashValue(string word) { //return hash value > 0
 	int hash_value = hashCal(word);
-	if (hash_array[hash_value].length() != 0) {
+	if (hash_array[hash_value].symbol.length() != 0) {
 		int i = hash_value;
-		while (hash_array[i].length() != 0) {
-			if (hash_array[i] == word) return i;
+		while (hash_array[i].symbol.length() != 0) {
+			if (hash_array[i].symbol == word) return i;
 			i += 1;
 			i %= HASH_LENGTH;
 		}
-		hash_array[i] = word;
+		hash_array[i] = Hash(i, word);
 		return i;
 	}
 	else {
-		hash_array[hash_value] = word;
+		hash_array[hash_value] = Hash(hash_value, word);
 		return hash_value;
 	}
 }
@@ -113,6 +128,7 @@ string getNextToken(string &word) { //get by reperence
 	}
 	default: {
 		while (word.length() > 0 and word.at(0) != ' ') {
+			if (word.at(0) == '(') return token;
 			if (word.at(0) == ')') return token;
 			token.push_back(word.at(0));
 			word.erase(0, 1);
@@ -128,6 +144,7 @@ string getNextToken(string &word) { //get by reperence
 
 int alloc() {
 	int alloc_index = freelist;
+	memory_array[freelist]->lchild = 0;
 	freelist = memory_array[freelist]->getrchild();
 	return alloc_index;
 }
@@ -176,7 +193,7 @@ int read() {
 }
 
 string concatenate(string body, string token) {
-	return body +" "+ token;
+	return body +" "+ token+" ";
 }
 
 string preprocessing() {
@@ -195,7 +212,7 @@ string preprocessing() {
 			}
 		}
 		else if (token == "'") {
-			new_command = concatenate(new_command, "(quote");
+			new_command = concatenate(new_command, "(quote ");
 			int number_of_nextparen = 0;
 			do {
 				token = getNextToken(input);
@@ -211,10 +228,35 @@ string preprocessing() {
 	}
 	return new_command;
 }
+bool isnumeric(string st) {
+	int len = st.length(), ascii_code, decimal_count = -1, negative_count = -1;
+	for (int i = 0; i < len; i++) {
+		ascii_code = int(st[i]);
+		switch (ascii_code) {
+		case 45: // Allow a negative sign.
+			negative_count++;
+			if (negative_count || i != 0) {
+				return false;
+			}
+			break;
+		case 46: // Allow a decimal point.
+			decimal_count++;
+			if (decimal_count) {
+				return false;
+			}
+			break;
+		default:
+			if (ascii_code < 48 || ascii_code > 57) {
+				return false;
+			}
+			break;
+		}
+	}
+}
 
-int eval(int node_root) {
+int eval(int node_root) { //token_index > 0 , return : hash < 0 , index > 0
 	if (node_root < 0) {
-		return -node_root;
+		return node_root;
 	}
 	int token_index = -memory_array[node_root]->lchild;
 
@@ -222,43 +264,64 @@ int eval(int node_root) {
 		return 0;
 	}
 	else if (token_index == getHashValue("+")) {
-		return getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) + stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
+		return -getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) + stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
 	}
 	else if (token_index == getHashValue("-")) {
-		return getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) - stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
+		return -getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) - stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
 	}
 	else if (token_index == getHashValue("*")) {
-		return getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) * stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
+		return -getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) * stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
 	}
 	else if (token_index == getHashValue("number?")) {
-		return 0;
+		if (isnumeric(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild)))) {
+			return -getHashValue("#t");
+		}
+		else return -getHashValue("#f");
 	}
 	else if (token_index == getHashValue("symbol?")) {
-		return 0;
+		if (!isnumeric(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))))
+			return -getHashValue("#t");
+		else return -getHashValue("#f");
 	}
 	else if (token_index == getHashValue("null?")) {
-		return 0;
+		if (memory_array[node_root]->rchild == 0 || eval(memory_array[memory_array[node_root]->rchild]->lchild) == 0 || memory_array[node_root]->lchild == 0)
+			return -getHashValue("#t");
+		else return -getHashValue("#f");
 	}
 	else if (token_index == getHashValue("cons")) {
-		return 0;
+		int new_memory = alloc();
+		memory_array[new_memory]->lchild = eval(memory_array[memory_array[node_root]->rchild]->lchild);
+		memory_array[new_memory]->rchild = eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild);
+		return new_memory;
 	}
 	else if (token_index == getHashValue("cond")) {
-		return 0;
+		while (memory_array[memory_array[node_root]->rchild]->rchild != 0) {
+			node_root = memory_array[node_root]->rchild;
+			if (eval(memory_array[memory_array[node_root]->lchild]->lchild) == -getHashValue("#t")) {
+				return eval(memory_array[memory_array[node_root]->lchild]->rchild);
+			}
+		}
+		if (memory_array[memory_array[memory_array[node_root]->rchild]->lchild]->lchild != -getHashValue("else")) {
+			cout << "error \n";
+			return 0;
+		}
+		return eval(memory_array[memory_array[memory_array[memory_array[node_root]->rchild]->lchild]->rchild]->lchild);
+
 	}
 	else if (token_index == getHashValue("car")) {
-		return 0;
+		return memory_array[eval(memory_array[memory_array[node_root]->rchild]->lchild)]->lchild;
 	}
 	else if (token_index == getHashValue("cdr")) {
-		return 0;
+		return memory_array[eval(memory_array[memory_array[node_root]->rchild]->lchild)]->rchild;
 	}
 	else if (token_index == getHashValue("define")) {
 		return 0;
 	}
 	else if (token_index == getHashValue("quote")) {
-		return 0;
+		return memory_array[memory_array[node_root]->rchild]->lchild;
 	}
 	else {
-		return token_index;
+		return -token_index;
 	}
 }
 
@@ -312,14 +375,14 @@ void outputHash() {
 */
 
 void outputString(int node_root, bool leftParam) {
-	if (node_root < 0) cout << hash_array[-node_root];
+	if (node_root < 0) cout << hash_array[-node_root].symbol;
 	else if (node_root == 0) cout << "()";
 	else {
 		int lchild = memory_array[node_root]->lchild;
 		int rchild = memory_array[node_root]->rchild;
 		if (leftParam) cout << "(";
 		if (lchild < 0) {
-			cout << hash_array[-lchild] << " ";
+			cout << hash_array[-lchild].symbol << " ";
 		}
 		else {
 			outputString(lchild, 1);
@@ -338,7 +401,7 @@ void output(int node_root) {
 
 int main() {
 	//hash array, memory array(30) making
-	hash_array[0] = "";
+	hash_array[0] = Hash(0, "");
 
 	for (int i = 0; i < MEMORY_LENGTH; i++) {
 		memory_array[i] = new Memory(i);
@@ -357,7 +420,7 @@ int main() {
 		output(read_root);
 		int result = 0;
 		result = eval(read_root);
-		cout << getVal(result);
+		output(result);
 		//printresult(result, true);
 	}
 
