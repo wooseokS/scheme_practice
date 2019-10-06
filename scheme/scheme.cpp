@@ -11,33 +11,39 @@ class Stack {
 private:
 	int top;
 	int capacity;
-	int** stack;
+	int* stack;
 public:
-	Stack(int stackCapacity = 10) {
+	Stack(int stackCapacity = 20) {
 		top = -1;
 		capacity = stackCapacity;
 		if (capacity < 1)
 			throw "stack capacity must be > 0";
-		stack = new int* [capacity];
+		stack = new int[capacity];
+	}
+	~Stack() {
+		delete[] stack;
 	}
 	inline bool isEmpty() const {
 		return top == -1;
 	}
-	inline int*& Top() const {
+	inline int& Top() const {
 		if (isEmpty()) {
 			throw "stack is empty";
 		}
 		return stack[top];
 	}
-	void Push(int hashVal, int value) {
-		stack[++top] = new int [hashVal, value];
+	void Push(int value) {
+		top += 1;
+		stack[top] = value;
 	}
 	void Pop() {
 		if (isEmpty())
 			throw "Stack is empty. Cannot delete.";
-		delete[] stack[top--];
+		top -= 1;
+		stack[top] = 0;
 	}
 };
+Stack variable = Stack(20);
 
 class Memory {
 public:
@@ -300,9 +306,37 @@ int eval(int node_root) { //token_index > 0 , return : hash < 0 , index > 0
 	int token_index = -memory_array[node_root]->lchild;
 
 	if (hash_array[token_index].pointer != -1) {
+		int lambda_array = hash_array[token_index].pointer;
+		int variable_array = memory_array[memory_array[lambda_array]->rchild]->lchild;
+		int func_array = memory_array[memory_array[memory_array[lambda_array]->rchild]->rchild]->lchild;
+		int node_var_array = memory_array[node_root]->rchild;
 		//stack 집어넣고 (집어 넣을 때 개수 세자)
+		int val_count = 0;
+		while (variable_array != 0) {
+			val_count += 1;
+			variable.Push(hash_array[-memory_array[variable_array]->lchild].pointer);
+			hash_array[-memory_array[variable_array]->lchild].pointer = eval(memory_array[node_var_array]->lchild);
+			node_var_array = memory_array[node_var_array]->rchild;
+			variable_array = memory_array[variable_array]->rchild;
+		}
 		//pointer로 eval 돌리고
+		int result_val = eval(func_array);
 		//stack pop하고.
+		//임시 stack 만들자. 거꾸로 들어갔으니까
+		Stack temp = Stack();
+		for (int i = 0; i++; i < val_count) {
+			temp.Push(variable.Top());
+			variable.Pop();
+		}
+		variable_array = memory_array[memory_array[lambda_array]->rchild]->lchild;
+		for (int i = 0; i++; i < val_count) {
+			hash_array[-memory_array[variable_array]->lchild].pointer = temp.Top();
+			temp.Pop();
+			variable_array = memory_array[variable_array]->rchild;
+		}
+
+		//local 벗어나니까 temp는 자동 dealloc
+		return result_val;
 	}
 	else if (token_index == getHashValue("+")) {
 		return -getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) + stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
@@ -466,7 +500,8 @@ int main() {
 
 		read_root = read();
 
-		output(read_root);
+		//output(read_root); 
+		//preprocessing이 끝난 input 출력
 		int result = 0;
 		result = eval(read_root);
 
