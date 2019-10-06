@@ -298,7 +298,7 @@ int eval(int node_root) { //token_index > 0 , return : hash < 0 , index > 0
 		while (memory_array[memory_array[node_root]->rchild]->rchild != 0) {
 			node_root = memory_array[node_root]->rchild;
 			if (eval(memory_array[memory_array[node_root]->lchild]->lchild) == -getHashValue("#t")) {
-				return eval(memory_array[memory_array[node_root]->lchild]->rchild);
+				return eval(memory_array[memory_array[memory_array[node_root]->lchild]->rchild]->lchild);
 			}
 		}
 		if (memory_array[memory_array[memory_array[node_root]->rchild]->lchild]->lchild != -getHashValue("else")) {
@@ -315,7 +315,12 @@ int eval(int node_root) { //token_index > 0 , return : hash < 0 , index > 0
 		return memory_array[eval(memory_array[memory_array[node_root]->rchild]->lchild)]->rchild;
 	}
 	else if (token_index == getHashValue("define")) {
-		return 0;
+		if (memory_array[memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild]->lchild == -getHashValue("lambda")) {
+			return -getHashValue("wow");
+		}
+		else {
+			return -getHashValue("nope");
+		}
 	}
 	else if (token_index == getHashValue("quote")) {
 		return memory_array[memory_array[node_root]->rchild]->lchild;
