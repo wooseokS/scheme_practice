@@ -7,6 +7,37 @@
 
 using namespace std;
 
+class Stack {
+private:
+	int top;
+	int capacity;
+	int** stack;
+public:
+	Stack(int stackCapacity = 10) {
+		top = -1;
+		capacity = stackCapacity;
+		if (capacity < 1)
+			throw "stack capacity must be > 0";
+		stack = new int* [capacity];
+	}
+	inline bool isEmpty() const {
+		return top == -1;
+	}
+	inline int*& Top() const {
+		if (isEmpty()) {
+			throw "stack is empty";
+		}
+		return stack[top];
+	}
+	void Push(int hashVal, int value) {
+		stack[++top] = new int [hashVal, value];
+	}
+	void Pop() {
+		if (isEmpty())
+			throw "Stack is empty. Cannot delete.";
+		delete[] stack[top--];
+	}
+};
 
 class Memory {
 public:
@@ -35,19 +66,21 @@ public:
 };
 Memory* memory_array[MEMORY_LENGTH];
 string input;
+
 class Hash {
 public:
 	int index;
 	string symbol;
 	int pointer;
 	Hash() {
-		index = NULL;
+		index = -1;
 		symbol = "";
-		pointer = NULL;
+		pointer = -1;
 	}
 	Hash(int index, string symbol) {
 		this->index = index;
 		this->symbol = symbol;
+		this->pointer = -1;
 	}
 };
 Hash hash_array[HASH_LENGTH];
@@ -210,6 +243,9 @@ string preprocessing() {
 				new_command = concatenate(new_command, preprocessing());
 				new_command = concatenate(new_command, ")");
 			}
+			else {
+				new_command = concatenate(new_command, token);
+			}
 		}
 		else if (token == "'") {
 			new_command = concatenate(new_command, "(quote ");
@@ -255,13 +291,18 @@ bool isnumeric(string st) {
 }
 
 int eval(int node_root) { //token_index > 0 , return : hash < 0 , index > 0
-	if (node_root < 0) {
-		return node_root;
+	if (node_root < 0) { // node_root 로 hash value 값이 들어왔을 때.
+		if (hash_array[-node_root].pointer != -1)
+			return hash_array[-node_root].pointer;
+		else
+			return node_root;
 	}
 	int token_index = -memory_array[node_root]->lchild;
 
-	if (token_index == getHashValue("user defined func")) {
-		return 0;
+	if (hash_array[token_index].pointer != -1) {
+		//stack 집어넣고 (집어 넣을 때 개수 세자)
+		//pointer로 eval 돌리고
+		//stack pop하고.
 	}
 	else if (token_index == getHashValue("+")) {
 		return -getHashValue(to_string(stof(getVal(eval(memory_array[memory_array[node_root]->rchild]->lchild))) + stof(getVal(eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild)))));
@@ -315,12 +356,13 @@ int eval(int node_root) { //token_index > 0 , return : hash < 0 , index > 0
 		return memory_array[eval(memory_array[memory_array[node_root]->rchild]->lchild)]->rchild;
 	}
 	else if (token_index == getHashValue("define")) {
-		if (memory_array[memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild]->lchild == -getHashValue("lambda")) {
-			return -getHashValue("wow");
+		if (memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild > 0) {
+			hash_array[-memory_array[memory_array[node_root]->rchild]->lchild].pointer = memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild;
 		}
 		else {
-			return -getHashValue("nope");
+			hash_array[-memory_array[memory_array[node_root]->rchild]->lchild].pointer = eval(memory_array[memory_array[memory_array[node_root]->rchild]->rchild]->lchild);
 		}
+		return 0;
 	}
 	else if (token_index == getHashValue("quote")) {
 		return memory_array[memory_array[node_root]->rchild]->lchild;
@@ -380,7 +422,9 @@ void outputHash() {
 */
 
 void outputString(int node_root, bool leftParam) {
-	if (node_root < 0) cout << hash_array[-node_root].symbol;
+	if (node_root < 0) {
+		cout << hash_array[-node_root].symbol;
+	}
 	else if (node_root == 0) cout << "()";
 	else {
 		int lchild = memory_array[node_root]->lchild;
@@ -397,7 +441,6 @@ void outputString(int node_root, bool leftParam) {
 	}
 }
 void output(int node_root) {
-	cout << '\n';
 	outputString(node_root, 1);
 
 	cout << '\n';
@@ -415,6 +458,7 @@ int main() {
 
 	while (1) {
 		int read_root = 0;
+		cout << "> ";
 		getline(cin, input);
 		input = doLower(input);
 
@@ -425,6 +469,8 @@ int main() {
 		output(read_root);
 		int result = 0;
 		result = eval(read_root);
+
+		cout << "\n] ";
 		output(result);
 		//printresult(result, true);
 	}
